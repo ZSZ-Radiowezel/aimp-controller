@@ -113,9 +113,9 @@ class AimpController:
     def handle_command(self, command: str) -> None:
         """Handle commands from admin panel."""
         command_handlers = {
-            "play": self.play_song,
-            "pause": self.pause_song,
-            "skip": self.skip_song
+            "Play": self.play_song,
+            "Pause": self.pause_song,
+            "Skip": self.skip_song
         }
         
         handler = command_handlers.get(command)
