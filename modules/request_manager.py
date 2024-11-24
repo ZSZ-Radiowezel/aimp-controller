@@ -82,13 +82,13 @@ class RequestManager:
 
         logger.info(f"Received command: {command}")
         try:
-            if command == 'play':
+            if command == 'Play':
                 self.aimp_controller.play_song()
-            elif command == 'pause':
+            elif command == 'Pause':
                 self.aimp_controller.pause_song()
-            elif command == 'next':
+            elif command == 'Pext':
                 self.aimp_controller.skip_song()
-            elif command == 'stop':
+            elif command == 'Stop':
                 self.aimp_controller.stop_audio_device(AUDIO_DEVICE_NAME)
             else:
                 logger.warning(f"Unknown command: {command}")
