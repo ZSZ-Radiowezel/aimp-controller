@@ -15,8 +15,8 @@ class CommandServer:
     def __init__(self, port: int = 5050):
         self.app = Flask(__name__)
         self.port = port
-        self.command_handler: Optional[Callable] = None
-        
+        self.command_handler = ["play", "pause", "next"]
+        self.aimp_controller = AimpController()
         # Endpoint do odbierania komend
         @self.app.route('/command', methods=['POST'])
         def handle_command():
@@ -24,13 +24,32 @@ class CommandServer:
                 data = request.get_json()
                 command = data.get('ToDO')
                 if command and self.command_handler:
-                    self.command_handler(command)
+                    self._handle_command(command)
                     return jsonify({'status': 'success'})
                 return jsonify({'status': 'error', 'message': 'Invalid command'}), 400
             except Exception as e:
                 logger.error(f"Error handling command: {e}")
                 return jsonify({'status': 'error', 'message': str(e)}), 500
 
+    def _handle_command(self, command: str):
+        """Handle incoming command."""
+        if not self.aimp_controller:
+            logger.error("AIMP controller not initialized")
+            return
+
+        logger.info(f"Received command: {command}")
+        try:
+            if command == 'play':
+                self.aimp_controller.play_song()
+            elif command == 'pause':
+                self.aimp_controller.pause_song()
+            elif command == 'next':
+                self.aimp_controller.skip_song()
+            else:
+                logger.warning(f"Unknown command: {command}")
+        except Exception as e:
+            logger.error(f"Error executing command {command}: {e}")
+        
     def start(self):
         """Start server in a separate thread."""
         def run():
@@ -82,14 +101,12 @@ class RequestManager:
 
         logger.info(f"Received command: {command}")
         try:
-            if command == 'Play':
+            if command == 'play':
                 self.aimp_controller.play_song()
-            elif command == 'Pause':
+            elif command == 'pause':
                 self.aimp_controller.pause_song()
-            elif command == 'Pext':
+            elif command == 'next':
                 self.aimp_controller.skip_song()
-            elif command == 'Stop':
-                self.aimp_controller.stop_audio_device(AUDIO_DEVICE_NAME)
             else:
                 logger.warning(f"Unknown command: {command}")
         except Exception as e:

@@ -76,11 +76,31 @@ class PlaylistManager:
             
             # Pobierz dane z backendu
             playlist_data = self.request_manager.fetch_songs_from_backend()
+            total_duration = timedelta()
+            
             if playlist_data:
-                self._process_playlist_data(playlist_data)
-            else:
-                logger.warning("Falling back to local playlist update")
-                self.update_playlist_local()
+                # Przetwórz piosenki z backendu
+                valid_songs = []
+                for song in playlist_data:
+                    if self._process_song(song['url']):
+                        valid_songs.append(song)
+                        duration = timedelta(seconds=self._parse_duration(song['duration']))
+                        total_duration += duration
+            
+            # Jeśli całkowity czas jest za krótki lub nie ma piosenek z backendu,
+            # uzupełnij lokalnymi piosenkami
+            while total_duration < timedelta(minutes=55):
+                song_path = self._get_random_local_song()
+                if not song_path:
+                    break
+                
+                duration = self._get_song_duration(song_path)
+                if duration:
+                    total_duration += duration
+                logger.info(f"Added local song {song_path} to playlist, total duration: {total_duration}")
+            
+            logger.info(f"Final playlist duration: {total_duration}")
+            
         except Exception as e:
             logger.error(f"Error updating playlist: {e}")
 
@@ -126,6 +146,7 @@ class PlaylistManager:
 
             # Get and analyze lyrics
             lyrics = self.transcript_api.analyze_audio(temp_path)
+            print(lyrics)
             if not lyrics:
                 self._add_to_blacklist(basename)
                 if os.path.exists(temp_path):
@@ -139,7 +160,7 @@ class PlaylistManager:
                 self._add_to_blacklist(basename)
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
-                logger.info(f"Text analysis failed for {basename}")
+                logger.info(f"Text analysis failed for {basename}, {analysis_result['profanity_result']}")
                 return False
             
             # Analyze sentiment and check if safe for radio
@@ -168,7 +189,7 @@ class PlaylistManager:
                     return False
             else:
                 # If not safe for radio, add to blacklist and remove temp file
-                logger.info(f"Song {basename} rejected. Reason: {sentiment_result.get('reason', 'Unknown')}")
+                logger.info(f"Song {basename} rejected. Reason: {sentiment_result.get('explanation', 'Unknown')}")
                 self._add_to_blacklist(basename)
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
